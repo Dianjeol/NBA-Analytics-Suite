@@ -607,10 +607,10 @@ if __name__ == '__main__':
     os.makedirs('static', exist_ok=True)
     os.makedirs('templates', exist_ok=True)
     
-    # Production-ready server configuration
-    host = os.environ.get('HOST', '127.0.0.1')
+    # Production-ready server configuration for Render
+    host = os.environ.get('HOST', '0.0.0.0')
     port = int(os.environ.get('PORT', 5000))
-    debug = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    debug = os.environ.get('FLASK_DEBUG', 'False').lower() in ['true', '1', 'yes']
     
     print(f"🏀 NBA Analytics Suite starting on {host}:{port}")
     print(f"📊 Debug mode: {debug}")
