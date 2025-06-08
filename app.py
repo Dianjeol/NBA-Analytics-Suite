@@ -120,9 +120,19 @@ def load_games_data(season=None):
             filename = f'nba_{season}_games.json'
         else:
             filename = 'nba_2024_games.json'  # Default fallback
+        
+        print(f"🏀 Attempting to load game data from: {filename}")
+        
+        # Check if file exists
+        if not os.path.exists(filename):
+            print(f"❌ File not found: {filename}")
+            print(f"📁 Current directory contents: {os.listdir('.')}")
+            return []
             
         with open(filename, 'r') as f:
             data = json.load(f)
+        
+        print(f"✅ Successfully loaded {filename}")
         
         all_games = []
         for game in data['response']:
@@ -145,8 +155,13 @@ def load_games_data(season=None):
                 })
         
         all_games.sort(key=lambda x: x['date'])
+        print(f"📊 Processed {len(all_games)} games")
         return all_games
-    except FileNotFoundError:
+    except FileNotFoundError as e:
+        print(f"❌ File not found: {e}")
+        return []
+    except Exception as e:
+        print(f"❌ Error loading game data: {e}")
         return []
 
 def get_team_conferences():
@@ -263,12 +278,35 @@ def get_remaining_games_breakdown(wins_a, wins_b, a_has_home_court):
         'remaining_games': remaining_games
     }
 
+@app.route('/health')
+def health_check():
+    """Health check endpoint for Render"""
+    return jsonify({
+        'status': 'healthy',
+        'message': 'NBA Analytics Suite is running',
+        'timestamp': datetime.now().isoformat()
+    })
+
 @app.route('/')
 def index():
     """Main dashboard with all analytics tools"""
-    # Update seasons on each request
-    season_manager.update_seasons()
-    return render_template('index.html')
+    try:
+        # Update seasons on each request
+        season_manager.update_seasons()
+        return render_template('index.html')
+    except Exception as e:
+        # Fallback for deployment issues
+        return f"""
+        <html>
+        <head><title>NBA Analytics Suite</title></head>
+        <body>
+        <h1>NBA Analytics Suite</h1>
+        <p>Service is starting up...</p>
+        <p>Error: {str(e)}</p>
+        <p><a href="/health">Health Check</a></p>
+        </body>
+        </html>
+        """
 
 @app.route('/api/calculate', methods=['POST'])
 def calculate_elo():
