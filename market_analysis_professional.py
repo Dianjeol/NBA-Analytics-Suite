@@ -298,4 +298,4 @@ def main():
     print("• Time horizon: Series completion (next 2-3 weeks)")
 
 if __name__ == "__main__":
-    main()
+    main() 

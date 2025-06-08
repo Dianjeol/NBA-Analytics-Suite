@@ -1,0 +1,35 @@
+{
+  "metadata": {
+    "team_a": "Pacers",
+    "team_b": "Thunder",
+    "series_state": "1-0",
+    "analysis_timestamp": "2025-06-08T13:30:05.901978",
+    "version": "1.0.0"
+  },
+  "estimates": [
+    {
+      "model_type": "Betting Markets",
+      "team_a_probability": 25.0,
+      "team_b_probability": 75.0,
+      "confidence_level": "High Confidence"
+    },
+    {
+      "model_type": "Elo Model (Adaptive K)",
+      "team_a_probability": 32.5,
+      "team_b_probability": 67.5,
+      "confidence_level": "Moderate Confidence"
+    },
+    {
+      "model_type": "Historical Precedent",
+      "team_a_probability": 44.4,
+      "team_b_probability": 55.6,
+      "confidence_level": "Moderate Confidence"
+    },
+    {
+      "model_type": "Historical (Game 1 Winners)",
+      "team_a_probability": 70.1,
+      "team_b_probability": 29.900000000000006,
+      "confidence_level": "Low Confidence"
+    }
+  ]
+}

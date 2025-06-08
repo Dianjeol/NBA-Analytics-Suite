@@ -1,45 +1,66 @@
-# NBA Elo Ratings Web App 🏀
+# NBA Analytics Suite 🏀📊
 
-A modern, responsive web application for calculating and visualizing NBA Elo ratings with real-time playoff series probability calculations.
+A comprehensive, professional-grade analytics suite for NBA data analysis, featuring Elo ratings, betting market analysis, and advanced statistical modeling.
 
 ## Features
 
+### 🏀 Elo Rating System
 - **Real-time Elo Calculations**: Process 2024-2025 NBA season data with customizable K-factors
 - **Team Rankings**: Live standings with win-loss records and conference breakdowns  
 - **Win Probability Calculator**: Single game predictions with home court advantage
 - **Playoff Series Calculator**: Best-of-7 series probabilities using proper NBA 2-2-1-1-1 format
-- **Modern UI**: Responsive design with Tailwind CSS and smooth animations
-- **Clean Data**: Automatically filters out preseason games for accurate NBA-only ratings
+- **Modern Web UI**: Responsive design with Tailwind CSS and smooth animations
+
+### 📊 Betting Market Analysis
+- **Market Inefficiency Detection**: Compare betting odds with statistical models
+- **Historical Analysis**: Leverage 70+ years of NBA Finals data
+- **Risk Assessment**: Kelly Criterion and expected value calculations
+- **Professional Visualization**: Publication-ready charts and graphs
+- **Multiple Model Integration**: Elo ratings, historical precedent, market odds
+
+### 🔧 Professional Tools
+- **Data Export**: JSON format for further analysis
+- **Comprehensive Reports**: Detailed analysis with executive summaries
+- **Type-Safe Code**: Professional Python with dataclasses and type hints
+- **Automated Setup**: One-command installation and testing
 
 ## Quick Start
 
-### Local Development
+### Automated Setup (Recommended)
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/nba-elo-app.git
-   cd nba-elo-app
-   ```
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/nba-analytics-suite.git
+cd nba-analytics-suite
 
-2. **Set up virtual environment**
+# Run automated setup
+python3 setup.py
+```
+
+### Manual Setup
+
+1. **Set up virtual environment**
    ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   python3 -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    pip install -r requirements.txt
    ```
 
-3. **Configure environment variables**
+2. **Run betting market analysis**
    ```bash
-   cp .env.example .env
-   # Edit .env with your settings (generate a strong SECRET_KEY)
+   python betting_market_vs_models.py
    ```
 
-4. **Run the application**
+3. **Start web application**
    ```bash
    python app.py
+   # Open browser: http://localhost:5000
    ```
 
-5. **Open in browser**: http://localhost:5000
+4. **Generate visualizations**
+   ```bash
+   python visualization.py
+   ```
 
 ## Deployment to Render 🚀
 
@@ -127,6 +148,40 @@ print(secrets.token_hex(32))
 - Classic PaaS option
 - Many add-ons available
 - Higher pricing than alternatives
+
+## 📊 Betting Market Analysis
+
+### Core Features
+- **Market Inefficiency Detection**: Compare betting odds with statistical models
+- **Kelly Criterion Calculations**: Optimal bet sizing recommendations
+- **Historical Precedent Analysis**: 70+ years of NBA Finals data
+- **Professional Visualizations**: Publication-ready charts and graphs
+
+### Example Usage
+```python
+from betting_market_vs_models import FinalsAnalyzer, ModelType
+
+# Initialize analyzer
+analyzer = FinalsAnalyzer("Pacers", "Thunder", "1-0")
+
+# Add probability estimates
+analyzer.add_estimate(ModelType.BETTING_MARKET, 25.0, "High Confidence")
+analyzer.add_estimate(ModelType.ELO_ADAPTIVE, 32.5, "Moderate Confidence")
+analyzer.add_estimate(ModelType.HISTORICAL_PRECEDENT, 44.4, "Moderate Confidence")
+
+# Generate comprehensive report
+report = analyzer.generate_comprehensive_report()
+print(report)
+
+# Export analysis
+json_file = analyzer.export_to_json()
+```
+
+### Risk Management
+- **Conservative Position Sizing**: 2-5% of bankroll recommendations
+- **Edge Detection**: Identify market inefficiencies
+- **Expected Value Calculations**: Quantify potential returns
+- **Professional Risk Disclaimers**: Educational use only
 
 ## API Endpoints
 
