@@ -292,7 +292,7 @@ def index():
     """Main dashboard with all analytics tools"""
     try:
         # Update seasons on each request
-        season_manager.update_seasons()
+        season_manager.add_new_season_if_needed()
         return render_template('index.html')
     except Exception as e:
         # Fallback for deployment issues
