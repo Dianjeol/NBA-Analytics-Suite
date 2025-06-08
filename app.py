@@ -10,9 +10,13 @@ import math
 import os
 from datetime import datetime
 from collections import defaultdict
+from season_manager import SeasonManager
 
 # Initialize Flask app with production-ready configuration
 app = Flask(__name__)
+
+# Initialize season manager
+season_manager = SeasonManager()
 
 # Security configuration using environment variables
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-change-in-production')
@@ -438,6 +442,40 @@ def get_teams():
     return jsonify({
         'teams': sorted(list(teams))
     })
+
+@app.route('/api/seasons')
+def get_seasons():
+    """Get list of available NBA seasons"""
+    try:
+        # Check for new seasons automatically
+        season_manager.add_new_season_if_needed()
+        
+        seasons = season_manager.get_available_seasons()
+        current_season = season_manager.get_current_season()
+        
+        seasons_data = []
+        for season in seasons:
+            seasons_data.append({
+                'season_id': season.season_id,
+                'display_name': season.display_name,
+                'start_date': season.start_date.isoformat(),
+                'end_date': season.end_date.isoformat(),
+                'is_current': season.is_current,
+                'data_available': season.data_file is not None
+            })
+        
+        return jsonify({
+            'success': True,
+            'seasons': seasons_data,
+            'current_season': current_season.season_id if current_season else None,
+            'count': len(seasons_data)
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 if __name__ == '__main__':
     # Production-ready configuration
