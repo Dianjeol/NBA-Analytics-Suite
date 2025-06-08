@@ -478,13 +478,17 @@ def get_teams():
 @app.route('/api/seasons')
 def get_seasons():
     """Get available seasons"""
-    season_manager.update_seasons()
-    seasons = season_manager.get_all_seasons()
+    season_manager.add_new_season_if_needed()
+    seasons = season_manager.get_available_seasons()
     current_season = season_manager.get_current_season()
     
+    # Convert seasons to dictionaries for JSON serialization
+    seasons_data = [season.to_dict() for season in seasons]
+    current_season_data = current_season.to_dict() if current_season else None
+    
     return jsonify({
-        'seasons': seasons,
-        'current_season': current_season,
+        'seasons': seasons_data,
+        'current_season': current_season_data,
         'total_seasons': len(seasons)
     })
 
@@ -610,6 +614,6 @@ if __name__ == '__main__':
     
     print(f"🏀 NBA Analytics Suite starting on {host}:{port}")
     print(f"📊 Debug mode: {debug}")
-    print(f"🔄 Season manager initialized with {len(season_manager.get_all_seasons())} seasons")
+    print(f"🔄 Season manager initialized with {len(season_manager.get_available_seasons())} seasons")
     
     app.run(host=host, port=port, debug=debug) 

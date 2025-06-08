@@ -359,7 +359,7 @@
                 const seasonsResponse = await fetch('/api/seasons');
                 const seasonsData = await seasonsResponse.json();
                 seasons = seasonsData.seasons;
-                currentSeason = seasonsData.current_season.season_id;
+                currentSeason = seasonsData.current_season ? seasonsData.current_season.season_id : null;
                 
                 populateSeasonSelect();
                 
@@ -386,7 +386,7 @@
             seasons.forEach(season => {
                 const option = document.createElement('option');
                 option.value = season.season_id;
-                option.textContent = `${season.season_id} (${season.status})`;
+                option.textContent = `${season.season_id} (${season.is_current ? 'Current' : 'Historical'})`;
                 select.appendChild(option);
             });
         }
@@ -415,7 +415,7 @@
             const season = seasons.find(s => s.season_id === currentSeason);
             if (season) {
                 document.getElementById('seasonStatus').textContent = 
-                    `${season.season_id} - ${season.status} (${season.start_date} to ${season.end_date})`;
+                    `${season.season_id} - ${season.is_current ? 'Current Season' : 'Historical Season'} (${season.start_date} to ${season.end_date})`;
             }
         }
 
