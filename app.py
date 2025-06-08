@@ -1,22 +1,30 @@
 #!/usr/bin/env python3
 """
-NBA Elo Ratings Web App
-A clean, modern web interface for NBA Elo ratings calculations
+NBA Analytics Suite Web Application
+A comprehensive web interface for NBA statistical analysis, betting market analysis, and visualizations
 """
 
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, send_file
 import json
 import math
 import os
 from datetime import datetime
 from collections import defaultdict
 from season_manager import SeasonManager
+from betting_market_vs_models import FinalsAnalyzer, ModelType, BettingOddsConverter
+from nba_visualization import NBAVisualization
+import io
+import base64
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend
+import matplotlib.pyplot as plt
 
 # Initialize Flask app with production-ready configuration
 app = Flask(__name__)
 
-# Initialize season manager
+# Initialize modules
 season_manager = SeasonManager()
+visualizer = NBAVisualization()
 
 # Security configuration using environment variables
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-change-in-production')
@@ -104,10 +112,16 @@ class EloCalculator:
         
         return new_rating_a, new_rating_b
 
-def load_games_data():
-    """Load NBA games data"""
+def load_games_data(season=None):
+    """Load NBA games data for specified season"""
     try:
-        with open('nba_2024_games.json', 'r') as f:
+        # Use season manager to get correct data file
+        if season:
+            filename = f'nba_{season}_games.json'
+        else:
+            filename = 'nba_2024_games.json'  # Default fallback
+            
+        with open(filename, 'r') as f:
             data = json.load(f)
         
         all_games = []
@@ -251,118 +265,136 @@ def get_remaining_games_breakdown(wins_a, wins_b, a_has_home_court):
 
 @app.route('/')
 def index():
-    """Main page"""
+    """Main dashboard with all analytics tools"""
+    # Update seasons on each request
+    season_manager.update_seasons()
     return render_template('index.html')
 
 @app.route('/api/calculate', methods=['POST'])
 def calculate_elo():
-    """Calculate Elo ratings based on parameters"""
-    data = request.json
-    
-    k_factor_type = data.get('k_factor_type', 'fixed')
-    k_factor_value = data.get('k_factor_value', 20)
-    date_filter = data.get('date_filter', 'full_season')
-    
-    # Load games
-    all_games = load_games_data()
-    
-    if not all_games:
-        return jsonify({'error': 'No games data found'}), 400
-    
-    # Filter games based on date
-    if date_filter == '2025_only':
-        filtered_games = [g for g in all_games if g['date'].year >= 2025]
-    else:
-        filtered_games = all_games
-    
-    # Initialize calculator
-    elo_calc = EloCalculator(k_factor_type=k_factor_type, k_factor_value=k_factor_value)
-    
-    # Process games
-    total_games = len(filtered_games)
-    for i, game in enumerate(filtered_games):
-        elo_calc.update_elo(
-            game['home_team'], 
-            game['visitor_team'],
-            game['home_score'], 
-            game['visitor_score'],
-            i + 1,
-            total_games
-        )
-    
-    # Prepare results
-    team_conferences = get_team_conferences()
-    sorted_teams = sorted(elo_calc.team_elos.items(), key=lambda x: x[1], reverse=True)
-    
-    results = []
-    for rank, (team, elo) in enumerate(sorted_teams, 1):
-        record = elo_calc.team_records[team]
-        results.append({
-            'rank': rank,
-            'team': team,
-            'elo': round(elo, 1),
-            'conference': team_conferences.get(team, 'Unknown'),
-            'wins': record['wins'],
-            'losses': record['losses'],
-            'record': f"{record['wins']}-{record['losses']}"
-        })
-    
-    # Calculate statistics
-    elos = [team[1] for team in sorted_teams]
-    stats = {
-        'total_games': total_games,
-        'highest_elo': max(elos),
-        'lowest_elo': min(elos),
-        'average_elo': sum(elos) / len(elos),
-        'elo_range': max(elos) - min(elos)
-    }
-    
-    return jsonify({
-        'results': results,
-        'stats': stats,
-        'parameters': {
-            'k_factor_type': k_factor_type,
-            'k_factor_value': k_factor_value,
-            'date_filter': date_filter
+    """Calculate Elo ratings with optional season selection"""
+    try:
+        data = request.json
+        k_factor_type = data.get('k_factor_type', 'fixed')
+        k_factor_value = int(data.get('k_factor_value', 20))
+        date_filter = data.get('date_filter', 'full_season')
+        selected_season = data.get('season', None)
+        
+        # Load games for selected season
+        all_games = load_games_data(selected_season)
+        
+        if not all_games:
+            return jsonify({'error': 'No game data available for selected season'}), 400
+        
+        # Apply date filter logic
+        if date_filter == "2025_only":
+            filtered_games = [game for game in all_games if game['date'].year == 2025]
+        else:
+            filtered_games = all_games
+        
+        if not filtered_games:
+            return jsonify({'error': 'No games found for selected period'}), 400
+        
+        # Initialize calculator and process games
+        calculator = EloCalculator(k_factor_type=k_factor_type, k_factor_value=k_factor_value)
+        total_games = len(filtered_games)
+        
+        for i, game in enumerate(filtered_games, 1):
+            calculator.update_elo(
+                game['home_team'], game['visitor_team'],
+                game['home_score'], game['visitor_score'],
+                i, total_games
+            )
+        
+        # Prepare results
+        team_conferences = get_team_conferences()
+        results = []
+        
+        for team, elo in calculator.team_elos.items():
+            record = calculator.team_records[team]
+            results.append({
+                'team': team,
+                'elo': round(elo, 1),
+                'wins': record['wins'],
+                'losses': record['losses'],
+                'conference': team_conferences.get(team, 'Unknown')
+            })
+        
+        results.sort(key=lambda x: x['elo'], reverse=True)
+        
+        # Calculate statistics
+        elos = [r['elo'] for r in results]
+        stats = {
+            'total_games': total_games,
+            'highest_elo': max(elos),
+            'lowest_elo': min(elos),
+            'average_elo': round(sum(elos) / len(elos), 1),
+            'elo_range': max(elos) - min(elos)
         }
-    })
+        
+        return jsonify({
+            'success': True,
+            'results': results,
+            'stats': stats,
+            'season': selected_season or season_manager.get_current_season()['season_id']
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/win_probability', methods=['POST'])
 def win_probability():
     """Calculate win probability between two teams"""
-    data = request.json
-    
-    team_a = data.get('team_a')
-    team_b = data.get('team_b')
-    elo_a = data.get('elo_a')
-    elo_b = data.get('elo_b')
-    
-    if not all([team_a, team_b, elo_a, elo_b]):
-        return jsonify({'error': 'Missing required parameters'}), 400
-    
-    # Calculate probabilities
-    neutral_prob_a = calculate_win_probability(elo_a, elo_b)
-    home_prob_a = calculate_win_probability(elo_a, elo_b, home_advantage=40)
-    away_prob_a = calculate_win_probability(elo_a, elo_b, home_advantage=-40)
-    
-    return jsonify({
-        'team_a': team_a,
-        'team_b': team_b,
-        'elo_a': elo_a,
-        'elo_b': elo_b,
-        'neutral_court': {
-            'prob_a': round(neutral_prob_a * 100, 1),
-            'prob_b': round((1 - neutral_prob_a) * 100, 1)
-        },
-        'team_a_home': {
-            'prob_a': round(home_prob_a * 100, 1),
-            'prob_b': round((1 - home_prob_a) * 100, 1)
-        },
-        'team_b_home': {
-            'prob_a': round(away_prob_a * 100, 1),
-            'prob_b': round((1 - away_prob_a) * 100, 1)
-        }
-    })
+    try:
+        data = request.json
+        team_a = data.get('team_a')
+        team_b = data.get('team_b')
+        season = data.get('season', None)
+        
+        # Calculate current Elo ratings for selected season
+        all_games = load_games_data(season)
+        
+        if not all_games:
+            return jsonify({'error': 'No game data available'}), 400
+        
+        calculator = EloCalculator()
+        for i, game in enumerate(all_games, 1):
+            calculator.update_elo(
+                game['home_team'], game['visitor_team'],
+                game['home_score'], game['visitor_score'],
+                i, len(all_games)
+            )
+        
+        elo_a = calculator.team_elos[team_a]
+        elo_b = calculator.team_elos[team_b]
+        
+        # Calculate probabilities
+        neutral_prob_a = calculate_win_probability(elo_a, elo_b)
+        home_prob_a = calculate_win_probability(elo_a, elo_b, home_advantage=65)
+        away_prob_a = calculate_win_probability(elo_a, elo_b, home_advantage=-65)
+        
+        return jsonify({
+            'success': True,
+            'team_a': team_a,
+            'team_b': team_b,
+            'elo_a': round(elo_a, 1),
+            'elo_b': round(elo_b, 1),
+            'neutral_site': {
+                'team_a_prob': round(neutral_prob_a * 100, 1),
+                'team_b_prob': round((1 - neutral_prob_a) * 100, 1)
+            },
+            'team_a_home': {
+                'team_a_prob': round(home_prob_a * 100, 1),
+                'team_b_prob': round((1 - home_prob_a) * 100, 1)
+            },
+            'team_b_home': {
+                'team_a_prob': round(away_prob_a * 100, 1),
+                'team_b_prob': round((1 - away_prob_a) * 100, 1)
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/series_probability', methods=['POST'])
 def series_probability():
@@ -432,55 +464,152 @@ def series_probability():
 
 @app.route('/api/teams')
 def get_teams():
-    """Get list of all teams"""
-    all_games = load_games_data()
-    teams = set()
-    for game in all_games:
-        teams.add(game['home_team'])
-        teams.add(game['visitor_team'])
-    
-    return jsonify({
-        'teams': sorted(list(teams))
-    })
+    """Get list of NBA teams"""
+    teams = [
+        'Atlanta Hawks', 'Boston Celtics', 'Brooklyn Nets', 'Charlotte Hornets', 'Chicago Bulls',
+        'Cleveland Cavaliers', 'Dallas Mavericks', 'Denver Nuggets', 'Detroit Pistons', 'Golden State Warriors',
+        'Houston Rockets', 'Indiana Pacers', 'LA Clippers', 'Los Angeles Lakers', 'Memphis Grizzlies',
+        'Miami Heat', 'Milwaukee Bucks', 'Minnesota Timberwolves', 'New Orleans Pelicans', 'New York Knicks',
+        'Oklahoma City Thunder', 'Orlando Magic', 'Philadelphia 76ers', 'Phoenix Suns', 'Portland Trail Blazers',
+        'Sacramento Kings', 'San Antonio Spurs', 'Toronto Raptors', 'Utah Jazz', 'Washington Wizards'
+    ]
+    return jsonify({'teams': teams})
 
 @app.route('/api/seasons')
 def get_seasons():
-    """Get list of available NBA seasons"""
+    """Get available seasons"""
+    season_manager.update_seasons()
+    seasons = season_manager.get_all_seasons()
+    current_season = season_manager.get_current_season()
+    
+    return jsonify({
+        'seasons': seasons,
+        'current_season': current_season,
+        'total_seasons': len(seasons)
+    })
+
+@app.route('/api/betting_analysis', methods=['POST'])
+def betting_analysis():
+    """Perform betting market analysis"""
     try:
-        # Check for new seasons automatically
-        season_manager.add_new_season_if_needed()
+        data = request.json
+        team_a = data.get('team_a')
+        team_b = data.get('team_b')
+        series_state = data.get('series_state', '0-0')
+        market_odds_a = data.get('market_odds_a')  # American odds
+        season = data.get('season', None)
         
-        seasons = season_manager.get_available_seasons()
-        current_season = season_manager.get_current_season()
+        # Calculate current Elo-based probabilities
+        all_games = load_games_data(season)
+        calculator = EloCalculator()
         
-        seasons_data = []
-        for season in seasons:
-            seasons_data.append({
-                'season_id': season.season_id,
-                'display_name': season.display_name,
-                'start_date': season.start_date.isoformat(),
-                'end_date': season.end_date.isoformat(),
-                'is_current': season.is_current,
-                'data_available': season.data_file is not None
-            })
+        for i, game in enumerate(all_games, 1):
+            calculator.update_elo(
+                game['home_team'], game['visitor_team'],
+                game['home_score'], game['visitor_score'],
+                i, len(all_games)
+            )
+        
+        elo_a = calculator.team_elos[team_a]
+        elo_b = calculator.team_elos[team_b]
+        
+        # Calculate Elo-based probability
+        elo_prob_a = calculate_win_probability(elo_a, elo_b) * 100
+        
+        # Convert market odds to probability
+        market_prob_a = BettingOddsConverter.odds_to_probability(market_odds_a)
+        
+        # Create analyzer and add estimates
+        analyzer = FinalsAnalyzer(team_a, team_b, series_state)
+        analyzer.add_estimate(ModelType.BETTING_MARKET, market_prob_a)
+        analyzer.add_estimate(ModelType.ELO_ADAPTIVE, elo_prob_a)
+        
+        # Generate analysis
+        report = analyzer.generate_comprehensive_report()
+        analysis_data = analyzer.export_to_json()
         
         return jsonify({
             'success': True,
-            'seasons': seasons_data,
-            'current_season': current_season.season_id if current_season else None,
-            'count': len(seasons_data)
+            'report': report,
+            'market_probability': round(market_prob_a, 1),
+            'elo_probability': round(elo_prob_a, 1),
+            'analysis': analysis_data,
+            'edge_detected': abs(market_prob_a - elo_prob_a) > 5.0  # 5% threshold
         })
-    
+        
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/visualization', methods=['POST'])
+def create_visualization():
+    """Generate visualization charts"""
+    try:
+        data = request.json
+        chart_type = data.get('chart_type', 'elo_rankings')
+        season = data.get('season', None)
+        
+        # Load data for selected season
+        all_games = load_games_data(season)
+        calculator = EloCalculator()
+        
+        for i, game in enumerate(all_games, 1):
+            calculator.update_elo(
+                game['home_team'], game['visitor_team'],
+                game['home_score'], game['visitor_score'],
+                i, len(all_games)
+            )
+        
+        # Prepare data for visualization
+        team_data = []
+        for team, elo in calculator.team_elos.items():
+            record = calculator.team_records[team]
+            team_data.append({
+                'team': team,
+                'elo': elo,
+                'wins': record['wins'],
+                'losses': record['losses']
+            })
+        
+        # Generate visualization based on type
+        if chart_type == 'elo_rankings':
+            fig = visualizer.create_elo_rankings_chart(team_data)
+        elif chart_type == 'elo_distribution':
+            fig = visualizer.create_elo_distribution_chart(team_data)
+        elif chart_type == 'conference_comparison':
+            fig = visualizer.create_conference_comparison_chart(team_data)
+        else:
+            return jsonify({'error': 'Unknown chart type'}), 400
+        
+        # Convert plot to base64 string
+        img_buffer = io.BytesIO()
+        fig.savefig(img_buffer, format='png', dpi=300, bbox_inches='tight')
+        img_buffer.seek(0)
+        img_base64 = base64.b64encode(img_buffer.read()).decode()
+        plt.close(fig)
+        
         return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+            'success': True,
+            'image': f'data:image/png;base64,{img_base64}',
+            'chart_type': chart_type
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 
 if __name__ == '__main__':
-    # Production-ready configuration
+    # Ensure static and templates directories exist
+    os.makedirs('static', exist_ok=True)
+    os.makedirs('templates', exist_ok=True)
+    
+    # Production-ready server configuration
+    host = os.environ.get('HOST', '127.0.0.1')
     port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
-    host = os.environ.get('HOST', '0.0.0.0')
     
-    app.run(debug=debug, host=host, port=port) 
+    print(f"🏀 NBA Analytics Suite starting on {host}:{port}")
+    print(f"📊 Debug mode: {debug}")
+    print(f"🔄 Season manager initialized with {len(season_manager.get_all_seasons())} seasons")
+    
+    app.run(host=host, port=port, debug=debug) 

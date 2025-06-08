@@ -3,78 +3,285 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NBA Elo Ratings Calculator</title>
+    <title>NBA Analytics Suite</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
         .loading { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .tab-button.active { background-color: #3b82f6; color: white; }
     </style>
 </head>
 <body class="bg-gray-100">
     <header class="gradient-bg text-white py-6 shadow-lg">
         <div class="container mx-auto px-4 text-center">
             <h1 class="text-4xl font-bold">
-                <i class="fas fa-basketball-ball mr-3"></i>NBA Elo Ratings Calculator
+                <i class="fas fa-basketball-ball mr-3"></i>NBA Analytics Suite
             </h1>
-            <p class="mt-2 text-lg opacity-90">Advanced statistical ratings for NBA teams</p>
+            <p class="mt-2 text-lg opacity-90">Professional NBA Statistical Analysis & Market Intelligence</p>
         </div>
     </header>
 
     <div class="container mx-auto px-4 py-8">
-        <!-- Controls Section -->
+        <!-- Season Selection -->
         <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
-            <h2 class="text-2xl font-bold mb-6 text-gray-800">
-                <i class="fas fa-sliders-h mr-2 text-blue-600"></i>Calculation Parameters
+            <h2 class="text-xl font-bold mb-4 text-gray-800">
+                <i class="fas fa-calendar-alt mr-2 text-blue-600"></i>Season Selection
             </h2>
             
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">K-Factor Type</label>
-                    <select id="kFactorType" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <option value="fixed">Fixed K-Factor</option>
-                        <option value="decreasing">Decreasing K-Factor</option>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">NBA Season</label>
+                    <select id="seasonSelect" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="">Loading seasons...</option>
                     </select>
-                    <p class="text-xs text-gray-500 mt-1">Fixed: Same K throughout season. Decreasing: 40→10 over time</p>
+                </div>
+                
+                <div class="flex items-end">
+                    <button id="loadSeasonBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
+                        <i class="fas fa-download mr-2"></i>Load Season Data
+                    </button>
+                </div>
+                
+                <div class="flex items-center">
+                    <div id="seasonInfo" class="text-sm text-gray-600">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        <span id="seasonStatus">Select a season to begin</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="bg-white rounded-lg shadow-lg mb-8">
+            <div class="flex border-b border-gray-200">
+                <button class="tab-button active px-6 py-4 text-sm font-medium border-b-2 border-transparent hover:border-gray-300" data-tab="elo">
+                    <i class="fas fa-chart-line mr-2"></i>Elo Ratings
+                </button>
+                <button class="tab-button px-6 py-4 text-sm font-medium border-b-2 border-transparent hover:border-gray-300" data-tab="betting">
+                    <i class="fas fa-coins mr-2"></i>Betting Analysis
+                </button>
+                <button class="tab-button px-6 py-4 text-sm font-medium border-b-2 border-transparent hover:border-gray-300" data-tab="visualization">
+                    <i class="fas fa-chart-bar mr-2"></i>Visualizations
+                </button>
+                <button class="tab-button px-6 py-4 text-sm font-medium border-b-2 border-transparent hover:border-gray-300" data-tab="probability">
+                    <i class="fas fa-calculator mr-2"></i>Probability Tools
+                </button>
+            </div>
+
+            <!-- Elo Ratings Tab -->
+            <div id="elo" class="tab-content active p-6">
+                <h3 class="text-xl font-bold mb-6 text-gray-800">Elo Rating Calculator</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">K-Factor Type</label>
+                        <select id="kFactorType" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="fixed">Fixed K-Factor</option>
+                            <option value="decreasing">Decreasing K-Factor</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">Fixed: Same K throughout season. Decreasing: 40→10 over time</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">K-Factor Value</label>
+                        <input type="number" id="kFactorValue" value="20" min="1" max="50" 
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <p class="text-xs text-gray-500 mt-1">Higher values = more volatile ratings</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Season Period</label>
+                        <select id="dateFilter" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="full_season">Full Season</option>
+                            <option value="2025_only">2025 Only</option>
+                        </select>
+                    </div>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">K-Factor Value</label>
-                    <input type="number" id="kFactorValue" value="20" min="1" max="50" 
-                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                    <p class="text-xs text-gray-500 mt-1">Higher values = more volatile ratings</p>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Season Period</label>
-                    <select id="dateFilter" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                        <option value="full_season">Full Season (Oct 2024 - Jun 2025)</option>
-                        <option value="2025_only">2025 Only (Jan - Jun 2025)</option>
-                    </select>
-                    <p class="text-xs text-gray-500 mt-1">Choose time period for analysis</p>
+                <div class="mt-6">
+                    <button id="calculateBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
+                        <i class="fas fa-calculator mr-2"></i>Calculate Elo Ratings
+                    </button>
                 </div>
             </div>
 
-            <div class="mt-6 flex flex-col sm:flex-row gap-4">
-                <button id="calculateBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
-                    <i class="fas fa-calculator mr-2"></i>Calculate Elo Ratings
-                </button>
+            <!-- Betting Analysis Tab -->
+            <div id="betting" class="tab-content p-6">
+                <h3 class="text-xl font-bold mb-6 text-gray-800">Betting Market Analysis</h3>
                 
-                <button id="probBtn" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
-                    <i class="fas fa-chart-pie mr-2"></i>Win Probability Tool
-                </button>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Team A</label>
+                        <select id="bettingTeamA" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="">Select Team A</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Team B</label>
+                        <select id="bettingTeamB" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="">Select Team B</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Series State</label>
+                        <select id="seriesState" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="0-0">0-0 (Series Start)</option>
+                            <option value="1-0">1-0</option>
+                            <option value="1-1">1-1</option>
+                            <option value="2-0">2-0</option>
+                            <option value="2-1">2-1</option>
+                            <option value="2-2">2-2</option>
+                            <option value="3-0">3-0</option>
+                            <option value="3-1">3-1</option>
+                            <option value="3-2">3-2</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Market Odds (American)</label>
+                        <input type="number" id="marketOdds" placeholder="e.g., -150 or +120" 
+                               class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <p class="text-xs text-gray-500 mt-1">American odds format (negative for favorites)</p>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <button id="analyzeBettingBtn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
+                        <i class="fas fa-chart-pie mr-2"></i>Analyze Betting Market
+                    </button>
+                </div>
+
+                <div id="bettingResults" class="mt-6 hidden">
+                    <!-- Betting analysis results will be displayed here -->
+                </div>
+            </div>
+
+            <!-- Visualization Tab -->
+            <div id="visualization" class="tab-content p-6">
+                <h3 class="text-xl font-bold mb-6 text-gray-800">Data Visualizations</h3>
                 
-                <button id="seriesBtn" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200">
-                    <i class="fas fa-trophy mr-2"></i>Best of 7 Series
-                </button>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <button class="viz-btn bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200" data-chart="elo_rankings">
+                        <i class="fas fa-trophy mr-2"></i>Elo Rankings
+                    </button>
+                    <button class="viz-btn bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200" data-chart="elo_distribution">
+                        <i class="fas fa-chart-area mr-2"></i>Elo Distribution
+                    </button>
+                    <button class="viz-btn bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200" data-chart="conference_comparison">
+                        <i class="fas fa-balance-scale mr-2"></i>Conference Compare
+                    </button>
+                </div>
+
+                <div id="vizResults" class="text-center">
+                    <p class="text-gray-500">Select a visualization type above to generate charts</p>
+                </div>
+            </div>
+
+            <!-- Probability Tools Tab -->
+            <div id="probability" class="tab-content p-6">
+                <h3 class="text-xl font-bold mb-6 text-gray-800">Win Probability & Series Calculator</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Game Probability -->
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <h4 class="text-lg font-semibold mb-4">Game Win Probability</h4>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Team A</label>
+                                <select id="gameTeamA" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                                    <option value="">Select Team A</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Team B</label>
+                                <select id="gameTeamB" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                                    <option value="">Select Team B</option>
+                                </select>
+                            </div>
+                            
+                            <button id="calcGameProbBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded transition duration-200">
+                                Calculate Game Probability
+                            </button>
+                            
+                            <div id="gameProbResults" class="hidden">
+                                <!-- Game probability results -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Series Probability -->
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <h4 class="text-lg font-semibold mb-4">Best of 7 Series</h4>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Team A</label>
+                                <select id="seriesTeamA" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                                    <option value="">Select Team A</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Team B</label>
+                                <select id="seriesTeamB" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                                    <option value="">Select Team B</option>
+                                </select>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Team A Wins</label>
+                                    <select id="teamAWins" class="w-full p-2 border border-gray-300 rounded">
+                                        <option value="0">0</option>
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Team B Wins</label>
+                                    <select id="teamBWins" class="w-full p-2 border border-gray-300 rounded">
+                                        <option value="0">0</option>
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="teamAHomeCourt" class="mr-2">
+                                    <span class="text-sm text-gray-700">Team A has home court advantage</span>
+                                </label>
+                            </div>
+                            
+                            <button id="calcSeriesProbBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded transition duration-200">
+                                Calculate Series Probability
+                            </button>
+                            
+                            <div id="seriesProbResults" class="hidden">
+                                <!-- Series probability results -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Loading State -->
         <div id="loading" class="text-center py-8 hidden">
             <i class="fas fa-spinner text-4xl text-blue-600 loading"></i>
-            <p class="text-gray-600 mt-2 text-lg">Calculating Elo ratings...</p>
+            <p class="text-gray-600 mt-2 text-lg">Processing...</p>
         </div>
 
         <!-- Results Section -->
@@ -116,15 +323,15 @@
                 
                 <div class="overflow-x-auto">
                     <table class="w-full">
-                                            <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Team</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Elo Rating</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Record</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conference</th>
-                        </tr>
-                    </thead>
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Team</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Elo Rating</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Record</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conference</th>
+                            </tr>
+                        </thead>
                         <tbody id="rankingsTable" class="bg-white divide-y divide-gray-200">
                             <!-- Rankings will be populated here -->
                         </tbody>
@@ -132,443 +339,448 @@
                 </div>
             </div>
         </div>
-
-        <!-- Win Probability Modal -->
-        <div id="probModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center z-50">
-            <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-md w-full">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-bold text-gray-900">Win Probability Calculator</h3>
-                    <button id="closeModal" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Team A</label>
-                        <select id="teamA" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
-                            <option value="">Select Team A</option>
-                        </select>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Team B</label>
-                        <select id="teamB" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
-                            <option value="">Select Team B</option>
-                        </select>
-                    </div>
-                    
-                    <button id="calcProbBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded transition duration-200">
-                        Calculate Probability
-                    </button>
-                    
-                    <div id="probResults" class="hidden mt-4 space-y-2">
-                        <!-- Probability results will be shown here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Best of 7 Series Modal -->
-        <div id="seriesModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden flex items-center justify-center z-50">
-            <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-lg w-full">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-bold text-gray-900">Best of 7 Series Calculator</h3>
-                    <button id="closeSeriesModal" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Team A</label>
-                        <select id="seriesTeamA" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
-                            <option value="">Select Team A</option>
-                        </select>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Team B</label>
-                        <select id="seriesTeamB" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
-                            <option value="">Select Team B</option>
-                        </select>
-                    </div>
-                    
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Team A Wins</label>
-                            <select id="teamAWins" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
-                                <option value="0">0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Team B Wins</label>
-                            <select id="teamBWins" class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
-                                <option value="0">0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-blue-50 p-3 rounded border border-blue-200">
-                        <p class="text-sm text-blue-800">
-                            <i class="fas fa-info-circle mr-1"></i>
-                            <strong>NBA Playoff Format:</strong> Home court advantage automatically determined by team rankings. 
-                            Higher seed hosts games 1, 2, 5, 7 (2-2-1-1-1 format).
-                        </p>
-                    </div>
-                    
-                    <button id="calcSeriesBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded transition duration-200">
-                        Calculate Series Probability
-                    </button>
-                    
-                    <div id="seriesResults" class="hidden mt-4 space-y-2">
-                        <!-- Series probability results will be shown here -->
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <script>
-        let currentResults = [];
+        // Global variables
+        let currentSeason = null;
         let teams = [];
+        let seasons = [];
 
-        // Load teams on page load
-        fetch('/api/teams')
-            .then(response => response.json())
-            .then(data => {
-                teams = data.teams;
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            setupEventListeners();
+        });
+
+        async function initializeApp() {
+            try {
+                // Load seasons
+                const seasonsResponse = await fetch('/api/seasons');
+                const seasonsData = await seasonsResponse.json();
+                seasons = seasonsData.seasons;
+                currentSeason = seasonsData.current_season.season_id;
+                
+                populateSeasonSelect();
+                
+                // Load teams
+                const teamsResponse = await fetch('/api/teams');
+                const teamsData = await teamsResponse.json();
+                teams = teamsData.teams;
+                
                 populateTeamSelects();
-            });
+                
+                // Set current season as selected
+                document.getElementById('seasonSelect').value = currentSeason;
+                updateSeasonInfo();
+                
+            } catch (error) {
+                console.error('Error initializing app:', error);
+            }
+        }
 
-        function populateTeamSelects() {
-            const teamA = document.getElementById('teamA');
-            const teamB = document.getElementById('teamB');
-            const seriesTeamA = document.getElementById('seriesTeamA');
-            const seriesTeamB = document.getElementById('seriesTeamB');
+        function populateSeasonSelect() {
+            const select = document.getElementById('seasonSelect');
+            select.innerHTML = '<option value="">Select Season</option>';
             
-            teams.forEach(team => {
-                teamA.appendChild(new Option(team, team));
-                teamB.appendChild(new Option(team, team));
-                seriesTeamA.appendChild(new Option(team, team));
-                seriesTeamB.appendChild(new Option(team, team));
+            seasons.forEach(season => {
+                const option = document.createElement('option');
+                option.value = season.season_id;
+                option.textContent = `${season.season_id} (${season.status})`;
+                select.appendChild(option);
             });
         }
 
-        // Calculate Elo ratings
-        document.getElementById('calculateBtn').addEventListener('click', async () => {
-            const loading = document.getElementById('loading');
-            const resultsSection = document.getElementById('resultsSection');
+        function populateTeamSelects() {
+            const selects = [
+                'bettingTeamA', 'bettingTeamB',
+                'gameTeamA', 'gameTeamB',
+                'seriesTeamA', 'seriesTeamB'
+            ];
             
-            loading.classList.remove('hidden');
-            resultsSection.classList.add('hidden');
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                select.innerHTML = '<option value="">Select Team</option>';
+                
+                teams.forEach(team => {
+                    const option = document.createElement('option');
+                    option.value = team;
+                    option.textContent = team;
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        function updateSeasonInfo() {
+            const season = seasons.find(s => s.season_id === currentSeason);
+            if (season) {
+                document.getElementById('seasonStatus').textContent = 
+                    `${season.season_id} - ${season.status} (${season.start_date} to ${season.end_date})`;
+            }
+        }
+
+        function setupEventListeners() {
+            // Tab navigation
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const tabId = this.dataset.tab;
+                    switchTab(tabId);
+                });
+            });
+
+            // Season selection
+            document.getElementById('loadSeasonBtn').addEventListener('click', function() {
+                currentSeason = document.getElementById('seasonSelect').value;
+                updateSeasonInfo();
+            });
+
+            // Elo calculation
+            document.getElementById('calculateBtn').addEventListener('click', calculateElo);
+
+            // Betting analysis
+            document.getElementById('analyzeBettingBtn').addEventListener('click', analyzeBetting);
+
+            // Visualizations
+            document.querySelectorAll('.viz-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const chartType = this.dataset.chart;
+                    generateVisualization(chartType);
+                });
+            });
+
+            // Probability calculations
+            document.getElementById('calcGameProbBtn').addEventListener('click', calculateGameProbability);
+            document.getElementById('calcSeriesProbBtn').addEventListener('click', calculateSeriesProbability);
+        }
+
+        function switchTab(tabId) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
             
-            const params = {
-                k_factor_type: document.getElementById('kFactorType').value,
-                k_factor_value: parseInt(document.getElementById('kFactorValue').value),
-                date_filter: document.getElementById('dateFilter').value
-            };
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
             
+            // Show selected tab content
+            document.getElementById(tabId).classList.add('active');
+            
+            // Add active class to clicked button
+            document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+        }
+
+        async function calculateElo() {
+            const kFactorType = document.getElementById('kFactorType').value;
+            const kFactorValue = document.getElementById('kFactorValue').value;
+            const dateFilter = document.getElementById('dateFilter').value;
+
+            showLoading();
+
             try {
                 const response = await fetch('/api/calculate', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(params)
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        k_factor_type: kFactorType,
+                        k_factor_value: kFactorValue,
+                        date_filter: dateFilter,
+                        season: currentSeason
+                    })
                 });
-                
-                const data = await response.json();
-                
-                if (data.error) {
-                    alert('Error: ' + data.error);
-                    return;
-                }
-                
-                currentResults = data.results;
-                displayResults(data);
-                
-            } catch (error) {
-                alert('Error calculating ratings: ' + error.message);
-            } finally {
-                loading.classList.add('hidden');
-            }
-        });
 
-        function displayResults(data) {
-            // Update statistics
-            document.getElementById('totalGames').textContent = data.stats.total_games.toLocaleString();
-            document.getElementById('highestElo').textContent = Math.round(data.stats.highest_elo);
-            document.getElementById('averageElo').textContent = Math.round(data.stats.average_elo);
-            document.getElementById('eloRange').textContent = Math.round(data.stats.elo_range);
-            
-            // Update rankings table
-            const tbody = document.getElementById('rankingsTable');
-            tbody.innerHTML = '';
-            
-            data.results.forEach(team => {
-                const row = document.createElement('tr');
-                row.className = 'hover:bg-gray-50';
-                
-                let rankBadge = '';
-                if (team.rank <= 3) {
-                    const colors = ['bg-yellow-100 text-yellow-800', 'bg-gray-100 text-gray-800', 'bg-orange-100 text-orange-800'];
-                    rankBadge = colors[team.rank - 1];
+                const data = await response.json();
+
+                if (data.success) {
+                    displayEloResults(data);
                 } else {
-                    rankBadge = 'bg-blue-100 text-blue-800';
+                    alert('Error: ' + data.error);
                 }
-                
-                row.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${rankBadge}">
-                            ${team.rank}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-medium text-gray-900">${team.team}</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-bold text-gray-900">${team.elo}</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-medium text-gray-900">${team.record}</div>
-                        <div class="text-xs text-gray-500">${team.wins}W - ${team.losses}L</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${team.conference === 'Eastern' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}">
-                            ${team.conference}
-                        </span>
-                    </td>
-                `;
-                
-                tbody.appendChild(row);
-            });
-            
-            document.getElementById('resultsSection').classList.remove('hidden');
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while calculating Elo ratings.');
+            } finally {
+                hideLoading();
+            }
         }
 
-        // Win Probability Modal
-        document.getElementById('probBtn').addEventListener('click', () => {
-            if (currentResults.length === 0) {
-                alert('Please calculate Elo ratings first!');
+        async function analyzeBetting() {
+            const teamA = document.getElementById('bettingTeamA').value;
+            const teamB = document.getElementById('bettingTeamB').value;
+            const seriesState = document.getElementById('seriesState').value;
+            const marketOdds = document.getElementById('marketOdds').value;
+
+            if (!teamA || !teamB || !marketOdds) {
+                alert('Please fill in all required fields');
                 return;
             }
-            document.getElementById('probModal').classList.remove('hidden');
-        });
 
-        document.getElementById('closeModal').addEventListener('click', () => {
-            document.getElementById('probModal').classList.add('hidden');
-        });
+            showLoading();
 
-        document.getElementById('calcProbBtn').addEventListener('click', async () => {
-            const teamA = document.getElementById('teamA').value;
-            const teamB = document.getElementById('teamB').value;
-            
+            try {
+                const response = await fetch('/api/betting_analysis', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        team_a: teamA,
+                        team_b: teamB,
+                        series_state: seriesState,
+                        market_odds_a: parseInt(marketOdds),
+                        season: currentSeason
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayBettingResults(data);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred during betting analysis.');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function generateVisualization(chartType) {
+            showLoading();
+
+            try {
+                const response = await fetch('/api/visualization', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        chart_type: chartType,
+                        season: currentSeason
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayVisualization(data.image, chartType);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while generating visualization.');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function calculateGameProbability() {
+            const teamA = document.getElementById('gameTeamA').value;
+            const teamB = document.getElementById('gameTeamB').value;
+
             if (!teamA || !teamB) {
-                alert('Please select both teams!');
+                alert('Please select both teams');
                 return;
             }
-            
-            if (teamA === teamB) {
-                alert('Please select different teams!');
-                return;
-            }
-            
-            const teamAData = currentResults.find(t => t.team === teamA);
-            const teamBData = currentResults.find(t => t.team === teamB);
-            
-            if (!teamAData || !teamBData) {
-                alert('Team data not found!');
-                return;
-            }
-            
+
             try {
                 const response = await fetch('/api/win_probability', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
                     body: JSON.stringify({
                         team_a: teamA,
                         team_b: teamB,
-                        elo_a: teamAData.elo,
-                        elo_b: teamBData.elo
+                        season: currentSeason
                     })
                 });
-                
-                const data = await response.json();
-                displayProbResults(data);
-                
-            } catch (error) {
-                alert('Error calculating probability: ' + error.message);
-            }
-        });
 
-        function displayProbResults(data) {
-            const resultsDiv = document.getElementById('probResults');
-            resultsDiv.innerHTML = `
-                <div class="bg-gray-50 p-4 rounded">
-                    <h4 class="font-semibold mb-2">${data.team_a} vs ${data.team_b}</h4>
-                    
-                    <div class="space-y-2">
-                        <div class="flex justify-between">
-                            <span>Neutral Court:</span>
-                            <span><strong>${data.neutral_court.prob_a}%</strong> - ${data.neutral_court.prob_b}%</span>
-                        </div>
-                        
-                        <div class="flex justify-between">
-                            <span>${data.team_a} Home:</span>
-                            <span><strong>${data.team_a_home.prob_a}%</strong> - ${data.team_a_home.prob_b}%</span>
-                        </div>
-                        
-                        <div class="flex justify-between">
-                            <span>${data.team_b} Home:</span>
-                            <span>${data.team_b_home.prob_a}% - <strong>${data.team_b_home.prob_b}%</strong></span>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-2 text-xs text-gray-600">
-                        Elo: ${data.team_a} (${data.elo_a}) vs ${data.team_b} (${data.elo_b})
-                    </div>
-                </div>
-            `;
-            resultsDiv.classList.remove('hidden');
+                const data = await response.json();
+
+                if (data.success) {
+                    displayGameProbabilityResults(data);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
         }
 
-        // Best of 7 Series Modal
-        document.getElementById('seriesBtn').addEventListener('click', () => {
-            if (currentResults.length === 0) {
-                alert('Please calculate Elo ratings first!');
-                return;
-            }
-            document.getElementById('seriesModal').classList.remove('hidden');
-        });
-
-        document.getElementById('closeSeriesModal').addEventListener('click', () => {
-            document.getElementById('seriesModal').classList.add('hidden');
-        });
-
-        document.getElementById('calcSeriesBtn').addEventListener('click', async () => {
+        async function calculateSeriesProbability() {
             const teamA = document.getElementById('seriesTeamA').value;
             const teamB = document.getElementById('seriesTeamB').value;
-            const winsA = parseInt(document.getElementById('teamAWins').value);
-            const winsB = parseInt(document.getElementById('teamBWins').value);
-            
+            const winsA = document.getElementById('teamAWins').value;
+            const winsB = document.getElementById('teamBWins').value;
+            const homeCourtA = document.getElementById('teamAHomeCourt').checked;
+
             if (!teamA || !teamB) {
-                alert('Please select both teams!');
+                alert('Please select both teams');
                 return;
             }
-            
-            if (teamA === teamB) {
-                alert('Please select different teams!');
-                return;
-            }
-            
-            if (winsA >= 4 || winsB >= 4) {
-                alert('Series is already over! Please select a valid current standing.');
-                return;
-            }
-            
-            const teamAData = currentResults.find(t => t.team === teamA);
-            const teamBData = currentResults.find(t => t.team === teamB);
-            
-            if (!teamAData || !teamBData) {
-                alert('Team data not found!');
-                return;
-            }
-            
+
             try {
                 const response = await fetch('/api/series_probability', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
                     body: JSON.stringify({
                         team_a: teamA,
                         team_b: teamB,
-                        elo_a: teamAData.elo,
-                        elo_b: teamBData.elo,
-                        rank_a: teamAData.rank,
-                        rank_b: teamBData.rank,
-                        wins_a: winsA,
-                        wins_b: winsB
+                        wins_a: parseInt(winsA),
+                        wins_b: parseInt(winsB),
+                        a_has_home_court: homeCourtA,
+                        season: currentSeason
                     })
                 });
-                
-                const data = await response.json();
-                displaySeriesResults(data);
-                
-            } catch (error) {
-                alert('Error calculating series probability: ' + error.message);
-            }
-        });
 
-        function displaySeriesResults(data) {
-            const resultsDiv = document.getElementById('seriesResults');
+                const data = await response.json();
+
+                if (data.success) {
+                    displaySeriesProbabilityResults(data);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function displayEloResults(data) {
+            // Update statistics
+            document.getElementById('totalGames').textContent = data.stats.total_games;
+            document.getElementById('highestElo').textContent = data.stats.highest_elo;
+            document.getElementById('averageElo').textContent = data.stats.average_elo;
+            document.getElementById('eloRange').textContent = Math.round(data.stats.elo_range);
+
+            // Update rankings table
+            const tableBody = document.getElementById('rankingsTable');
+            tableBody.innerHTML = '';
+
+            data.results.forEach((team, index) => {
+                const row = document.createElement('tr');
+                row.className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${index + 1}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${team.team}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${team.elo}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${team.wins}-${team.losses}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${team.conference}</td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+
+            document.getElementById('resultsSection').classList.remove('hidden');
+        }
+
+        function displayBettingResults(data) {
+            const resultsDiv = document.getElementById('bettingResults');
             
-            // Create remaining games breakdown
-            const remainingGamesText = data.remaining_games.length > 0 ? 
-                `Games ${data.remaining_games.join(', ')} remaining` : 'Series complete';
+            const edgeClass = data.edge_detected ? 'text-green-600' : 'text-gray-600';
+            const edgeText = data.edge_detected ? 'EDGE DETECTED' : 'No significant edge';
             
             resultsDiv.innerHTML = `
-                <div class="bg-gray-50 p-4 rounded">
-                    <h4 class="font-semibold mb-3">${data.team_a} (#${data.rank_a}) vs ${data.team_b} (#${data.rank_b})</h4>
-                    <div class="text-sm text-gray-600 mb-2">Current Series Standing: ${data.current_standing}</div>
-                    <div class="text-sm text-blue-700 mb-2 font-medium">
-                        <i class="fas fa-home mr-1"></i><strong>Home Court Advantage:</strong> ${data.home_court_advantage_team}
-                    </div>
-                    <div class="text-xs text-gray-600 mb-3">${remainingGamesText}</div>
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h4 class="text-lg font-semibold mb-4">Market Analysis Results</h4>
                     
-                    <div class="space-y-3">
-                        <div class="border-b border-gray-200 pb-2">
-                            <h5 class="font-medium text-gray-800">Neutral Court Probability</h5>
-                            <div class="flex justify-between mt-1 text-sm">
-                                <span>${data.team_a}: ${data.neutral_prob_a}%</span>
-                                <span>${data.team_b}: ${data.neutral_prob_b}%</span>
-                            </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="text-center p-4 bg-white rounded-lg">
+                            <h5 class="font-medium text-gray-700">Market Probability</h5>
+                            <p class="text-2xl font-bold text-blue-600">${data.market_probability}%</p>
                         </div>
                         
-                        <div class="border-b border-gray-200 pb-2">
-                            <h5 class="font-medium text-gray-800">Remaining Games Breakdown</h5>
-                            <div class="text-xs text-gray-600 mt-1 space-y-1">
-                                <div>${data.team_a}: ${data.a_remaining_home} home, ${data.a_remaining_away} away</div>
-                                <div>${data.team_b}: ${data.b_remaining_home} home, ${data.b_remaining_away} away</div>
-                            </div>
+                        <div class="text-center p-4 bg-white rounded-lg">
+                            <h5 class="font-medium text-gray-700">Elo Model Probability</h5>
+                            <p class="text-2xl font-bold text-purple-600">${data.elo_probability}%</p>
                         </div>
-                        
-                        <div>
-                            <h5 class="font-medium text-gray-800">Series Win Probability (NBA Format)</h5>
-                            <div class="flex justify-between mt-1">
-                                <span class="font-semibold ${data.series_prob_a > data.series_prob_b ? 'text-green-600' : 'text-gray-600'}">${data.team_a}: ${data.series_prob_a}%</span>
-                                <span class="font-semibold ${data.series_prob_b > data.series_prob_a ? 'text-green-600' : 'text-gray-600'}">${data.team_b}: ${data.series_prob_b}%</span>
-                            </div>
-                        </div>
-                        
-                        <div class="w-full bg-gray-200 rounded-full h-3 mt-2">
-                            <div class="bg-blue-600 h-3 rounded-full transition-all duration-500" style="width: ${data.series_prob_a}%"></div>
-                        </div>
-                        
-                        <div class="text-xs text-gray-500 mt-2 border-t border-gray-200 pt-2">
-                            <strong>NBA Format:</strong> Higher seed (${data.higher_seed}) hosts games 1, 2, 5, 7<br>
-                            Lower seed (${data.lower_seed}) hosts games 3, 4, 6
-                        </div>
+                    </div>
+                    
+                    <div class="text-center p-4 bg-white rounded-lg">
+                        <h5 class="font-medium text-gray-700">Analysis Result</h5>
+                        <p class="text-xl font-bold ${edgeClass}">${edgeText}</p>
+                        <p class="text-sm text-gray-500 mt-2">Difference: ${Math.abs(data.market_probability - data.elo_probability).toFixed(1)}%</p>
                     </div>
                 </div>
             `;
+            
             resultsDiv.classList.remove('hidden');
         }
 
-        // K-Factor type change handler
-        document.getElementById('kFactorType').addEventListener('change', (e) => {
-            const kFactorValue = document.getElementById('kFactorValue');
-            if (e.target.value === 'decreasing') {
-                kFactorValue.disabled = true;
-                kFactorValue.value = '40→10';
-            } else {
-                kFactorValue.disabled = false;
-                kFactorValue.value = '20';
-            }
-        });
+        function displayVisualization(imageData, chartType) {
+            const resultsDiv = document.getElementById('vizResults');
+            
+            resultsDiv.innerHTML = `
+                <div class="text-center">
+                    <h4 class="text-lg font-semibold mb-4 capitalize">${chartType.replace('_', ' ')}</h4>
+                    <img src="${imageData}" alt="${chartType}" class="mx-auto rounded-lg shadow-lg">
+                </div>
+            `;
+        }
+
+        function displayGameProbabilityResults(data) {
+            const resultsDiv = document.getElementById('gameProbResults');
+            
+            resultsDiv.innerHTML = `
+                <div class="space-y-3 mt-4">
+                    <div class="text-center p-3 bg-white rounded">
+                        <h5 class="font-medium text-gray-700">Neutral Site</h5>
+                        <p class="text-sm">${data.team_a}: ${data.neutral_site.team_a_prob}%</p>
+                        <p class="text-sm">${data.team_b}: ${data.neutral_site.team_b_prob}%</p>
+                    </div>
+                    
+                    <div class="text-center p-3 bg-white rounded">
+                        <h5 class="font-medium text-gray-700">${data.team_a} at Home</h5>
+                        <p class="text-sm">${data.team_a}: ${data.team_a_home.team_a_prob}%</p>
+                        <p class="text-sm">${data.team_b}: ${data.team_a_home.team_b_prob}%</p>
+                    </div>
+                    
+                    <div class="text-center p-3 bg-white rounded">
+                        <h5 class="font-medium text-gray-700">${data.team_b} at Home</h5>
+                        <p class="text-sm">${data.team_a}: ${data.team_b_home.team_a_prob}%</p>
+                        <p class="text-sm">${data.team_b}: ${data.team_b_home.team_b_prob}%</p>
+                    </div>
+                </div>
+            `;
+            
+            resultsDiv.classList.remove('hidden');
+        }
+
+        function displaySeriesProbabilityResults(data) {
+            const resultsDiv = document.getElementById('seriesProbResults');
+            
+            resultsDiv.innerHTML = `
+                <div class="space-y-3 mt-4">
+                    <div class="text-center p-4 bg-white rounded-lg">
+                        <h5 class="font-medium text-gray-700">Series Win Probability</h5>
+                        <p class="text-xl font-bold text-blue-600">${data.team_a}: ${data.team_a_series_prob}%</p>
+                        <p class="text-xl font-bold text-red-600">${data.team_b}: ${data.team_b_series_prob}%</p>
+                    </div>
+                    
+                    <div class="text-sm text-gray-600 bg-white p-3 rounded">
+                        <h6 class="font-medium mb-2">Current Status:</h6>
+                        <p>${data.team_a}: ${data.wins_a} wins</p>
+                        <p>${data.team_b}: ${data.wins_b} wins</p>
+                        <p>Home court: ${data.a_has_home_court ? data.team_a : data.team_b}</p>
+                    </div>
+                </div>
+            `;
+            
+            resultsDiv.classList.remove('hidden');
+        }
+
+        function showLoading() {
+            document.getElementById('loading').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.add('hidden');
+        }
     </script>
 </body>
 </html> 
